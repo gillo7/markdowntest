@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lab Worksheet</title>
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1d2330; --muted: #5f6b7a;
+    --border: #d9dee5; --accent: #2563eb; --accent-soft: #e8efff;
+    --q-bg: #f3f6ff; --code-bg: #eef1f5; --ok: #15803d; --warn: #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b; --card: #1a1e26; --text: #e4e7ec; --muted: #9aa4b2;
+      --border: #2c323d; --accent: #6b9bff; --accent-soft: #1e2a45;
+      --q-bg: #1b2335; --code-bg: #232833; --ok: #4ade80; --warn: #fbbf24;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .bar {
+    position: sticky; top: 0; z-index: 10; background: var(--card);
+    border-bottom: 1px solid var(--border);
+  }
+  .bar-inner {
+    max-width: 860px; margin: 0 auto; padding: 10px 16px;
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  }
+  .progress { font-size: 14px; color: var(--muted); margin-right: auto; }
+  .progress b { color: var(--text); }
+  .status { font-size: 13px; }
+  .status.saved { color: var(--ok); }
+  .status.pending { color: var(--warn); }
+  button {
+    font: inherit; font-size: 14px; padding: 7px 14px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:hover { filter: brightness(0.96); }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+  .student {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px; margin-bottom: 24px;
+  }
+  @media (max-width: 560px) { .student { grid-template-columns: 1fr; } }
+  label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+  input[type=text], textarea {
+    width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+  }
+  input[type=text]:focus, textarea:focus {
+    outline: 2px solid var(--accent); outline-offset: -1px; border-color: var(--accent);
+  }
+  #lab { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 8px 28px 28px; }
+  #lab h1 { font-size: 1.7em; }
+  #lab h2 { margin-top: 1.8em; padding-bottom: 4px; border-bottom: 1px solid var(--border); }
+  #lab img { max-width: 100%; height: auto; border-radius: 6px; }
+  #lab code { background: var(--code-bg); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
+  #lab pre { background: var(--code-bg); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+  #lab pre code { background: none; padding: 0; }
+  #lab blockquote {
+    margin: 1em 0; padding: 4px 16px; border-left: 4px solid var(--border); color: var(--muted);
+  }
+  #lab table { border-collapse: collapse; }
+  #lab th, #lab td { border: 1px solid var(--border); padding: 6px 10px; }
+  .question {
+    background: var(--q-bg); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 12px 16px; margin: 1.2em 0;
+  }
+  .question .q-text { color: var(--text); }
+  .question .q-text p { margin: 0 0 8px; }
+  .question textarea { min-height: 70px; resize: vertical; background: var(--card); }
+  .question.answered { border-left-color: var(--ok); }
+  .error { color: #dc2626; }
+  .print-answer { display: none; }
+
+  @media print {
+    body { background: #fff; color: #000; }
+    .bar, .no-print { display: none !important; }
+    main { padding: 0; }
+    #lab, .student { border: none; padding: 0; background: #fff; }
+    .question { background: #fff; border: 1px solid #999; break-inside: avoid; }
+    .question textarea { display: none; }
+    .print-answer {
+      display: block; white-space: pre-wrap; border-top: 1px dashed #999;
+      padding-top: 6px; margin-top: 6px; min-height: 1.5em;
+    }
+    .student input { border: none; border-bottom: 1px solid #000; border-radius: 0; background: #fff; }
+  }
+</style>
+</head>
+<body>
+<div class="bar">
+  <div class="bar-inner">
+    <span class="progress" id="progress">Loading…</span>
+    <span class="status" id="status"></span>
+    <button id="btn-print">Print / PDF</button>
+    <button id="btn-download" class="primary">Download answers</button>
+    <button id="btn-clear" class="no-print">Clear</button>
+  </div>
+</div>
+
+<main>
+  <div class="student">
+    <div><label for="name">Name</label><input type="text" id="name" autocomplete="name"></div>
+    <div><label for="matric">Matriculation number</label><input type="text" id="matric"></div>
+  </div>
+  <article id="lab"><p>Loading lab…</p></article>
+</main>
+
+<script>
+(() => {
+  // Which lab file to load: ?lab=lab3/README.md, ?lab=lab3 (→ lab3/README.md), default README.md
+  const params = new URLSearchParams(location.search);
+  let labPath = params.get('lab') || 'README.md';
+  if (!/\.md$/i.test(labPath)) labPath = labPath.replace(/\/$/, '') + '/README.md';
+  const labUrl = new URL(labPath, location.href);
+  const KEY = `labform:${location.pathname}:${labPath}`;
+
+  const $ = id => document.getElementById(id);
+  const labEl = $('lab');
+  let state = load();
+  let questions = [];     // [{id, text, textarea}]
+  let labTitle = 'Lab';
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY)) || { answers: {}, dirty: false }; }
+    catch { return { answers: {}, dirty: false }; }
+  }
+  function save(markDirty = true) {
+    if (markDirty) state.dirty = true;
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {}
+    updateStatus();
+  }
+
+  function updateStatus() {
+    const done = questions.filter(q => (state.answers[q.id] || '').trim()).length;
+    $('progress').innerHTML = `<b>${done}</b> / ${questions.length} answered`;
+    const s = $('status');
+    if (state.dirty) { s.textContent = 'Saved in this browser — not exported yet'; s.className = 'status pending'; }
+    else { s.textContent = done ? 'Exported ✓' : ''; s.className = 'status saved'; }
+  }
+
+  // Remove <!-- form:hide --> … <!-- /form:hide --> sections (e.g. the GitHub banner)
+  function stripHidden(md) {
+    return md.replace(/<!--\s*form:hide\s*-->[\s\S]*?<!--\s*\/form:hide\s*-->/g, '');
+  }
+
+  function render(md) {
+    const html = DOMPurify.sanitize(marked.parse(stripHidden(md), { gfm: true }));
+    labEl.innerHTML = html;
+
+    // Fix relative image/link paths so they resolve next to the lab file
+    labEl.querySelectorAll('img[src]').forEach(img => {
+      img.src = new URL(img.getAttribute('src'), labUrl).href;
+    });
+    labEl.querySelectorAll('a[href]').forEach(a => {
+      const href = a.getAttribute('href');
+      if (!href.startsWith('#')) { a.href = new URL(href, labUrl).href; a.target = '_blank'; a.rel = 'noopener'; }
+    });
+
+    const h1 = labEl.querySelector('h1');
+    if (h1) { labTitle = h1.textContent.trim(); document.title = labTitle; }
+
+    // Turn every blockquote starting with **Qn.** into a question with an answer box
+    const seen = new Set();
+    labEl.querySelectorAll('blockquote').forEach(bq => {
+      const first = bq.querySelector('p > strong:first-child');
+      if (!first || first.parentElement !== bq.firstElementChild) return;
+      const m = first.textContent.trim().match(/^(Q[\w.-]*?)\.?$/i);
+      if (!m) return;
+      let id = m[1].toUpperCase();
+      if (seen.has(id)) console.warn(`Duplicate question ID ${id} — answers will clash`);
+      seen.add(id);
+
+      const box = document.createElement('div');
+      box.className = 'question';
+      box.id = 'q-' + id;
+      const text = document.createElement('div');
+      text.className = 'q-text';
+      text.innerHTML = bq.innerHTML;
+
+      const ta = document.createElement('textarea');
+      ta.setAttribute('aria-label', `Answer to ${id}`);
+      ta.placeholder = 'Your answer…';
+      ta.value = state.answers[id] || '';
+      const printCopy = document.createElement('div');
+      printCopy.className = 'print-answer';
+      printCopy.textContent = ta.value;
+
+      const autosize = () => { ta.style.height = 'auto'; ta.style.height = Math.max(70, ta.scrollHeight + 2) + 'px'; };
+      ta.addEventListener('input', () => {
+        state.answers[id] = ta.value;
+        printCopy.textContent = ta.value;
+        box.classList.toggle('answered', !!ta.value.trim());
+        autosize();
+        save();
+      });
+      box.classList.toggle('answered', !!ta.value.trim());
+
+      box.append(text, ta, printCopy);
+      bq.replaceWith(box);
+      requestAnimationFrame(autosize);
+
+      questions.push({ id, text: (text.innerText ?? text.textContent).replace(/^Q[\w.-]*\.?\s*/i, '').trim(), textarea: ta });
+    });
+
+    if (!questions.length) {
+      labEl.insertAdjacentHTML('afterbegin',
+        '<p class="error">No questions found. Mark each question as a blockquote starting with <code>**Q1.**</code>.</p>');
+    }
+    updateStatus();
+  }
+
+  // Student details
+  ['name', 'matric'].forEach(f => {
+    const el = $(f);
+    el.value = state[f] || '';
+    el.addEventListener('input', () => { state[f] = el.value; save(); });
+  });
+
+  function buildMarkdown() {
+    const lines = [
+      `# ${labTitle} — Answers`, '',
+      `**Name:** ${state.name || ''}  `,
+      `**Matriculation number:** ${state.matric || ''}  `,
+      `**Exported:** ${new Date().toLocaleString('en-GB')}`, ''
+    ];
+    questions.forEach(q => {
+      lines.push(`## ${q.id}`, '', ...q.text.split('\n').map(l => `> ${l}`), '',
+                 (state.answers[q.id] || '').trim() || '_(no answer)_', '');
+    });
+    return lines.join('\n');
+  }
+
+  $('btn-download').addEventListener('click', () => {
+    const blob = new Blob([buildMarkdown()], { type: 'text/markdown' });
+    const who = (state.matric || state.name || 'answers').replace(/[^\w-]+/g, '_');
+    const lab = labTitle.replace(/[^\w-]+/g, '_').slice(0, 40);
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: `${lab}_${who}.md` });
+    a.click();
+    URL.revokeObjectURL(a.href);
+    state.dirty = false; save(false);
+  });
+
+  $('btn-print').addEventListener('click', () => { window.print(); });
+  window.addEventListener('afterprint', () => { state.dirty = false; save(false); });
+
+  $('btn-clear').addEventListener('click', () => {
+    if (!confirm('Delete all your answers for this lab from this browser?')) return;
+    state = { answers: {}, dirty: false };
+    save(false);
+    location.reload();
+  });
+
+  window.addEventListener('beforeunload', e => {
+    if (state.dirty) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  fetch(labUrl, { cache: 'no-cache' })
+    .then(r => { if (!r.ok) throw new Error(`${r.status} ${r.statusText}`); return r.text(); })
+    .then(render)
+    .catch(err => {
+      labEl.innerHTML = `<p class="error">Couldn't load <code>${labPath}</code> (${err.message}).</p>`;
+      $('progress').textContent = '';
+    });
+})();
+</script>
+</body>
+</html>
